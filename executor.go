@@ -133,7 +133,7 @@ func (e *executor) runTask(writer http.ResponseWriter, request *http.Request) {
 		e.log.Error("参数解析错误:" + string(req))
 		return
 	}
-	e.log.Info("任务参数:%v", param)
+	e.log.Info("任务参数: %+v", param)
 	if !e.regList.Exists(param.ExecutorHandler) {
 		_, _ = writer.Write(returnCall(param, FailureCode, "Task not registered"))
 		e.log.Error("任务[" + Int64ToStr(param.JobID) + "]没有注册:" + param.ExecutorHandler)
@@ -155,7 +155,7 @@ func (e *executor) runTask(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	cxt := context.WithValue(context.Background(), "trace_id", fmt.Sprintf("JobID:%d Handler:%s", param.JobID, param.ExecutorHandler))
+	cxt := context.WithValue(context.Background(), "trace_id", fmt.Sprintf("%s:%d", param.ExecutorHandler, param.JobID))
 	task := e.regList.Get(param.ExecutorHandler)
 	if param.ExecutorTimeout > 0 {
 		task.Ext, task.Cancel = context.WithTimeout(cxt, time.Duration(param.ExecutorTimeout)*time.Second)
