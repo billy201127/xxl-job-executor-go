@@ -3,6 +3,7 @@ package xxl
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -154,7 +155,7 @@ func (e *executor) runTask(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	cxt := context.Background()
+	cxt := context.WithValue(context.Background(), "trace_id", fmt.Sprintf("JobID:%d Handler:%s", param.JobID, param.ExecutorHandler))
 	task := e.regList.Get(param.ExecutorHandler)
 	if param.ExecutorTimeout > 0 {
 		task.Ext, task.Cancel = context.WithTimeout(cxt, time.Duration(param.ExecutorTimeout)*time.Second)
