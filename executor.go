@@ -317,6 +317,8 @@ func (e *executor) callback(task *Task, code int64, msg string) {
 	e.runList.Del(Int64ToStr(task.Id))
 	res, err := e.post("/api/callback", string(returnCall(task.Param, code, msg)))
 	if err != nil {
+		message := fmt.Sprintf("TaskID: %d\nTaskParam: %s\nFailedReason: %s", task.Id, task.Param.ExecutorParams, err.Error())
+		_ = SendCardMsg(e.opts.NotifyWebhook, e.opts.NotifySecret, "任务回调失败报警", message, true)
 		e.log.Error("callback err : ", err.Error())
 		return
 	}
@@ -325,6 +327,12 @@ func (e *executor) callback(task *Task, code int64, msg string) {
 	if err != nil {
 		e.log.Error("callback ReadAll err : ", err.Error())
 		return
+	}
+
+	lowerMsg := strings.ToLower(msg)
+	if strings.Contains(lowerMsg, "fail") || strings.Contains(lowerMsg, "error") {
+		message := fmt.Sprintf("TaskID: %d\nTaskParam: %s\nFailedReason: %s", task.Id, task.Param.ExecutorParams, msg)
+		_ = SendCardMsg(e.opts.NotifyWebhook, e.opts.NotifySecret, "任务执行失败报警", message, true)
 	}
 	e.log.Info("任务回调成功:" + string(body))
 }

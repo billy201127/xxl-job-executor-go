@@ -1,8 +1,9 @@
 package xxl
 
 import (
-	"github.com/go-basic/ipv4"
 	"time"
+
+	"github.com/go-basic/ipv4"
 )
 
 type Options struct {
@@ -14,7 +15,9 @@ type Options struct {
 	RegistryKey  string        `json:"registry_key"`  //执行器名称
 	LogDir       string        `json:"log_dir"`       //日志目录
 
-	l Logger //日志处理
+	l             Logger //日志处理
+	NotifyWebhook string `json:"notify_webhook"` // 通知url
+	NotifySecret  string `json:"notify_secret"`
 }
 
 func newOptions(opts ...Option) Options {
@@ -81,5 +84,19 @@ func RegistryKey(registryKey string) Option {
 func SetLogger(l Logger) Option {
 	return func(o *Options) {
 		o.l = l
+	}
+}
+
+// NotifyWebhook
+func NotifyWebhook(webhook string) Option {
+	return func(o *Options) {
+		o.NotifyWebhook = webhook
+	}
+}
+
+// NotifySecret
+func NotifySecret(secret string) Option {
+	return func(o *Options) {
+		o.NotifySecret = secret
 	}
 }
