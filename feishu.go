@@ -70,11 +70,11 @@ func SendCardMsg(webhook, secret, title, content string, isAtAll bool) error {
 	msg.Card.Header.Template = "blue"
 	if isAtAll {
 		msg.Card.Header.Template = "red"
-		content += `<at user_id="all">所有人</at>`
+		content += `<at id=all>所有人</at>`
 	}
 
 	hostname, _ := os.Hostname()
-	content = fmt.Sprintf("hostname: [%s]\n%s", hostname, content)
+	content = fmt.Sprintf("Hostname: [%s]\n%s\n", hostname, content)
 	element := Element{
 		Tag:     "markdown",
 		Content: content,
