@@ -168,7 +168,11 @@ func (e *executor) runTask(writer http.ResponseWriter, request *http.Request) {
 	task.log = e.log
 
 	e.runList.Set(Int64ToStr(task.Id), task)
-	go task.Run(func(code int64, msg string) {
+
+	notify := func(message string) {
+		_ = SendCardMsg(e.opts.NotifyWebhook, e.opts.NotifySecret, "任务执行超时报警", message, false)
+	}
+	go task.Run(notify, func(code int64, msg string) {
 		e.callback(task, code, msg)
 	})
 	e.log.Info("任务[" + Int64ToStr(param.JobID) + "]开始执行:" + param.ExecutorHandler)

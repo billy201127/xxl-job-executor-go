@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"runtime/debug"
+	"time"
 )
 
 // TaskFunc 任务执行函数
@@ -24,7 +25,7 @@ type Task struct {
 }
 
 // Run 运行任务
-func (t *Task) Run(callback func(code int64, msg string)) {
+func (t *Task) Run(notify func(message string), callback func(code int64, msg string)) {
 	defer func(cancel func()) {
 		if err := recover(); err != nil {
 			t.log.Info(t.Info()+" panic: %v", err)
@@ -33,7 +34,16 @@ func (t *Task) Run(callback func(code int64, msg string)) {
 			cancel()
 		}
 	}(t.Cancel)
+
+	startTime := time.Now()
 	msg := t.fn(t.Ext, t.Param)
+
+	duration := time.Since(startTime)
+	if duration > time.Hour {
+		message := fmt.Sprintf("任务ID: %d\n任务描述: %s\n执行时长: %v\n执行时间超过一小时,关注是否需要优化", t.Id, t.Name, duration)
+		notify(message)
+	}
+
 	callback(SuccessCode, msg)
 	return
 }
