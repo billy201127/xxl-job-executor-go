@@ -170,7 +170,8 @@ func (e *executor) runTask(writer http.ResponseWriter, request *http.Request) {
 	e.runList.Set(Int64ToStr(task.Id), task)
 
 	notify := func(message string) {
-		_ = SendCardMsg(e.opts.NotifyWebhook, e.opts.NotifySecret, "任务执行超时报警", message, false)
+		message = fmt.Sprintf("任务执行超时报警\n%s", message)
+		Alert(e.opts.NotifyWebhook, e.opts.NotifySecret, message, true)
 	}
 	go task.Run(notify, func(code int64, msg string) {
 		e.callback(task, code, msg)
@@ -321,8 +322,8 @@ func (e *executor) callback(task *Task, code int64, msg string) {
 	e.runList.Del(Int64ToStr(task.Id))
 	res, err := e.post("/api/callback", string(returnCall(task.Param, code, msg)))
 	if err != nil {
-		message := fmt.Sprintf("任务ID: %d\n任务描述: %s\n任务参数: %s\n失败原因: %s", task.Id, task.Name, task.Param.ExecutorParams, err.Error())
-		_ = SendCardMsg(e.opts.NotifyWebhook, e.opts.NotifySecret, "任务回调失败报警", message, true)
+		message := fmt.Sprintf("任务回调失败报警\n任务ID: %d\n任务描述: %s\n任务参数: %s\n失败原因: %s", task.Id, task.Name, task.Param.ExecutorParams, err.Error())
+		Alert(e.opts.NotifyWebhook, e.opts.NotifySecret, message, true)
 		e.log.Error("callback err : ", err.Error())
 		return
 	}
@@ -335,8 +336,8 @@ func (e *executor) callback(task *Task, code int64, msg string) {
 
 	lowerMsg := strings.ToLower(msg)
 	if strings.Contains(lowerMsg, "fail") || strings.Contains(lowerMsg, "error") {
-		message := fmt.Sprintf("任务ID: %d\n任务描述: %s\n任务参数: %s\n失败原因: %s", task.Id, task.Name, task.Param.ExecutorParams, msg)
-		_ = SendCardMsg(e.opts.NotifyWebhook, e.opts.NotifySecret, "任务执行失败报警", message, true)
+		message := fmt.Sprintf("任务执行失败报警\n任务ID: %d\n任务描述: %s\n任务参数: %s\n失败原因: %s", task.Id, task.Name, task.Param.ExecutorParams, msg)
+		Alert(e.opts.NotifyWebhook, e.opts.NotifySecret, message, true)
 	}
 	e.log.Info("任务回调成功:" + string(body))
 }
