@@ -2,6 +2,8 @@ module github.com/billy201127/xxl-job-executor-go
 
 go 1.24.0
 
+replace gomod.pri/golib v1.0.0 => github.com/billy201127/golib v0.0.41
+
 require (
 	github.com/go-basic/ipv4 v1.0.0
 	gomod.pri/golib v1.0.0
@@ -38,5 +40,3 @@ require (
 	google.golang.org/grpc v1.65.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 )
-
-replace gomod.pri/golib v1.0.0 => github.com/billy201127/golib v0.0.33

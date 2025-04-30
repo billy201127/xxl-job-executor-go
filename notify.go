@@ -15,5 +15,9 @@ func Alert(webhook, secret, content string, isAtAll bool) {
 		},
 	})
 
-	_ = nf.SendText(context.Background(), content, isAtAll, []string{})
+	if isAtAll {
+		_ = nf.SendText(context.Background(), content, notify.AtAll())
+	} else {
+		_ = nf.SendText(context.Background(), content)
+	}
 }
