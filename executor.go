@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -130,13 +129,13 @@ func (e *executor) runTask(writer http.ResponseWriter, request *http.Request) {
 	err := json.Unmarshal(req, &param)
 	if err != nil {
 		_, _ = writer.Write(returnCall(param, FailureCode, "params err"))
-		e.log.Error("参数解析错误:" + string(req))
+		e.log.Error("params err:" + string(req))
 		return
 	}
-	e.log.Info("任务参数: %+v", param)
+	e.log.Info("task params: %+v", param)
 	if !e.regList.Exists(param.ExecutorHandler) {
 		_, _ = writer.Write(returnCall(param, FailureCode, "Task not registered"))
-		e.log.Error("任务[" + Int64ToStr(param.JobID) + "]没有注册:" + param.ExecutorHandler)
+		e.log.Error("task not registered:" + param.ExecutorHandler)
 		return
 	}
 
@@ -150,7 +149,7 @@ func (e *executor) runTask(writer http.ResponseWriter, request *http.Request) {
 			}
 		} else { //单机串行,丢弃后续调度 都进行阻塞
 			_, _ = writer.Write(returnCall(param, FailureCode, "There are tasks running"))
-			e.log.Error("任务[" + Int64ToStr(param.JobID) + "]已经在运行了:" + param.ExecutorHandler)
+			e.log.Error("task already running:" + param.ExecutorHandler)
 			return
 		}
 	}
@@ -170,13 +169,13 @@ func (e *executor) runTask(writer http.ResponseWriter, request *http.Request) {
 	e.runList.Set(Int64ToStr(task.Id), task)
 
 	notify := func(message string) {
-		message = fmt.Sprintf("任务执行超时报警\n%s", message)
+		message = fmt.Sprintf("task timeout alert\n%s", message)
 		Alert(e.opts.NotifyWebhook, e.opts.NotifySecret, message, true)
 	}
 	go task.Run(notify, func(code int64, msg string) {
 		e.callback(task, code, msg)
 	})
-	e.log.Info("任务[" + Int64ToStr(param.JobID) + "]开始执行:" + param.ExecutorHandler)
+	e.log.Info("task[" + Int64ToStr(param.JobID) + "] start:" + param.ExecutorHandler)
 	_, _ = writer.Write(returnGeneral())
 }
 
@@ -189,7 +188,7 @@ func (e *executor) killTask(writer http.ResponseWriter, request *http.Request) {
 	_ = json.Unmarshal(req, &param)
 	if !e.runList.Exists(Int64ToStr(param.JobID)) {
 		_, _ = writer.Write(returnKill(param, FailureCode))
-		e.log.Error("任务[" + Int64ToStr(param.JobID) + "]没有运行")
+		e.log.Error("task not running:" + Int64ToStr(param.JobID))
 		return
 	}
 	task := e.runList.Get(Int64ToStr(param.JobID))
@@ -204,17 +203,17 @@ func (e *executor) taskLog(writer http.ResponseWriter, request *http.Request) {
 	data, err := ioutil.ReadAll(request.Body)
 	req := &LogReq{}
 	if err != nil {
-		e.log.Error("日志请求失败:" + err.Error())
+		e.log.Error("log request failed:" + err.Error())
 		reqErrLogHandler(writer, req, err)
 		return
 	}
 	err = json.Unmarshal(data, &req)
 	if err != nil {
-		e.log.Error("日志请求解析失败:" + err.Error())
+		e.log.Error("log request parse failed:" + err.Error())
 		reqErrLogHandler(writer, req, err)
 		return
 	}
-	e.log.Info("日志请求参数:%+v", req)
+	e.log.Info("log request params: %+v", req)
 	if e.logHandler != nil {
 		res = e.logHandler(req)
 	} else {
@@ -226,7 +225,7 @@ func (e *executor) taskLog(writer http.ResponseWriter, request *http.Request) {
 
 // 心跳检测
 func (e *executor) beat(writer http.ResponseWriter, request *http.Request) {
-	e.log.Info("心跳检测")
+	e.log.Info("beat")
 	_, _ = writer.Write(returnGeneral())
 }
 
@@ -240,15 +239,15 @@ func (e *executor) idleBeat(writer http.ResponseWriter, request *http.Request) {
 	err := json.Unmarshal(req, &param)
 	if err != nil {
 		_, _ = writer.Write(returnIdleBeat(FailureCode))
-		e.log.Error("参数解析错误:" + string(req))
+		e.log.Error("params err:" + string(req))
 		return
 	}
 	if e.runList.Exists(Int64ToStr(param.JobID)) {
 		_, _ = writer.Write(returnIdleBeat(FailureCode))
-		e.log.Error("idleBeat任务[" + Int64ToStr(param.JobID) + "]正在运行")
+		e.log.Error("idleBeat task[" + Int64ToStr(param.JobID) + "] running")
 		return
 	}
-	e.log.Info("忙碌检测任务参数:%v", param)
+	e.log.Info("idleBeat task params: %v", param)
 	_, _ = writer.Write(returnGeneral())
 }
 
@@ -264,7 +263,7 @@ func (e *executor) registry() {
 	}
 	param, err := json.Marshal(req)
 	if err != nil {
-		log.Fatal("执行器注册信息解析失败:" + err.Error())
+		e.log.Error("executor registry info parse failed:" + err.Error())
 	}
 	for {
 		<-t.C
@@ -272,22 +271,22 @@ func (e *executor) registry() {
 		func() {
 			result, err := e.post("/api/registry", string(param))
 			if err != nil {
-				e.log.Error("执行器注册失败1:" + err.Error())
+				e.log.Error("executor registry failed1:" + err.Error())
 				return
 			}
 			defer result.Body.Close()
 			body, err := ioutil.ReadAll(result.Body)
 			if err != nil {
-				e.log.Error("执行器注册失败2:" + err.Error())
+				e.log.Error("executor registry failed2:" + err.Error())
 				return
 			}
 			res := &res{}
 			_ = json.Unmarshal(body, &res)
 			if res.Code != SuccessCode {
-				e.log.Error("执行器注册失败3:" + string(body))
+				e.log.Error("executor registry failed3:" + string(body))
 				return
 			}
-			e.log.Info("执行器注册成功:" + string(body))
+			e.log.Info("executor registry success:" + string(body))
 		}()
 
 	}
@@ -304,17 +303,17 @@ func (e *executor) registryRemove() {
 	}
 	param, err := json.Marshal(req)
 	if err != nil {
-		e.log.Error("执行器摘除失败:" + err.Error())
+		e.log.Error("executor remove failed:" + err.Error())
 		return
 	}
 	res, err := e.post("/api/registryRemove", string(param))
 	if err != nil {
-		e.log.Error("执行器摘除失败:" + err.Error())
+		e.log.Error("executor remove failed:" + err.Error())
 		return
 	}
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
-	e.log.Info("执行器摘除成功:" + string(body))
+	e.log.Info("executor remove success:" + string(body))
 }
 
 // 回调任务列表
@@ -322,7 +321,7 @@ func (e *executor) callback(task *Task, code int64, msg string) {
 	e.runList.Del(Int64ToStr(task.Id))
 	res, err := e.post("/api/callback", string(returnCall(task.Param, code, msg)))
 	if err != nil {
-		message := fmt.Sprintf("任务回调失败报警\n任务ID: %d\n任务描述: %s\n任务参数: %s\n失败原因: %s", task.Id, task.Name, task.Param.ExecutorParams, err.Error())
+		message := fmt.Sprintf("task callback failed alert\ntaskID: %d\ntask name: %s\ntask params: %s\nfailed reason: %s", task.Id, task.Name, task.Param.ExecutorParams, err.Error())
 		Alert(e.opts.NotifyWebhook, e.opts.NotifySecret, message, true)
 		e.log.Error("callback err : ", err.Error())
 		return
@@ -336,10 +335,10 @@ func (e *executor) callback(task *Task, code int64, msg string) {
 
 	lowerMsg := strings.ToLower(msg)
 	if strings.Contains(lowerMsg, "fail") || strings.Contains(lowerMsg, "error") {
-		message := fmt.Sprintf("任务执行失败报警\n任务ID: %d\n任务描述: %s\n任务参数: %s\n失败原因: %s", task.Id, task.Name, task.Param.ExecutorParams, msg)
+		message := fmt.Sprintf("task execution failed alert\ntaskID: %d\ntask name: %s\ntask params: %s\nfailed reason: %s", task.Id, task.Name, task.Param.ExecutorParams, msg)
 		Alert(e.opts.NotifyWebhook, e.opts.NotifySecret, message, true)
 	}
-	e.log.Info("任务回调成功:" + string(body))
+	e.log.Info("task callback success:" + string(body))
 }
 
 // post
