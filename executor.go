@@ -90,6 +90,7 @@ func (e *executor) Run() (err error) {
 	mux.HandleFunc("/kill", e.killTask)
 	mux.HandleFunc("/log", e.taskLog)
 	mux.HandleFunc("/beat", e.beat)
+	mux.HandleFunc("/ping", e.ping)
 	mux.HandleFunc("/idleBeat", e.idleBeat)
 	// 创建服务器
 	server := &http.Server{
@@ -227,6 +228,12 @@ func (e *executor) taskLog(writer http.ResponseWriter, request *http.Request) {
 func (e *executor) beat(writer http.ResponseWriter, request *http.Request) {
 	e.log.Info("beat")
 	_, _ = writer.Write(returnGeneral())
+}
+
+// 心跳检测
+func (e *executor) ping(writer http.ResponseWriter, request *http.Request) {
+	e.log.Info("ping")
+	_, _ = writer.Write(returnPing())
 }
 
 // 忙碌检测
