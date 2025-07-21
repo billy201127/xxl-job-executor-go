@@ -341,7 +341,8 @@ func (e *executor) callback(task *Task, code int64, msg string) {
 	}
 
 	lowerMsg := strings.ToLower(msg)
-	if strings.Contains(lowerMsg, "fail") || strings.Contains(lowerMsg, "error") {
+	if !strings.Contains(lowerMsg, "success") {
+		// if strings.Contains(lowerMsg, "fail") || strings.Contains(lowerMsg, "error") {
 		message := fmt.Sprintf("task execution failed alert\ntaskID: %d\ntask name: %s\ntask params: %s\nfailed reason: %s", task.Id, task.Name, task.Param.ExecutorParams, msg)
 		Alert(e.opts.NotifyWebhook, e.opts.NotifySecret, message, true)
 	}
